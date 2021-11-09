@@ -1,5 +1,9 @@
 import psico.selecting
+from pathlib import Path
 from pymol import cmd
+
+DATA_DIR = Path(__file__).resolve().parent / "data"
+FILENAME_WITH_MSE = DATA_DIR / "2x19-frag-mse.pdb"
 
 
 def test_select_range():
@@ -10,6 +14,13 @@ def test_select_range():
     assert 4 == cmd.count_atoms("s1 & guide")
     psico.selecting.select_range("s2", "resn SER")
     assert 5 == cmd.count_atoms("s2 & guide")
+
+
+def test_select_domains():
+    cmd.reinitialize()
+    cmd.load(FILENAME_WITH_MSE, "m1")
+    psico.selecting.select_domains()
+    assert cmd.get_names("all") == ["m1", "domain_B_132_137"]
 
 
 # def select_pepseq(pattern, selection='all', name='sele', state=1, quiet=1,

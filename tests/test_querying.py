@@ -109,6 +109,14 @@ def test_get_segis():
     assert psico.querying.get_segis() == {"seg1", "seg2"}
 
 
+def test_object_chain_iter():
+    cmd.reinitialize()
+    cmd.fab("A/1/ GGG B/1/ AAA", "m1")
+    cmd.fab("A/1/ CCC B/1/ VVV", "m2")
+    assert [("m1", "A"), ("m2", "A"), ("m2", "B")
+            ] == list(psico.querying.object_chain_iter("resn GLY+CYS+VAL"))
+
+
 #def centerofmass(selection='(all)', state=-1, quiet=1):
 #def gyradius(selection='(all)', state=-1, quiet=1):
 #def get_alignment_coords(name, active_only=0, state=-1, quiet=0):

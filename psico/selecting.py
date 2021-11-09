@@ -366,6 +366,103 @@ ARGUMENTS
         _self.delete(tmpsele)
 
 
+def select_domains(selection: str = "all",
+                   prefix: str = "domain",
+                   minsize: int = 70,
+                   method="mean",
+                   cutoff: float = 999.9,
+                   quiet: bool = True,
+                   *,
+                   _self=cmd) -> list:
+    """
+DESCRIPTION
+
+    Make domain selections based on a contact matrix heuristic.
+
+ARGUMENTS
+
+    selection = str: Atom selection {default: all}
+
+    prefix = str: Prefix for selection names {default: domain}
+
+    minsize = int: Minimum size of a domain in residues
+
+    method = mean|max: Function for partitioning the distance matrix
+
+    cutoff = float: Partitioning cutoff
+    """
+    import numpy
+    from .numeric import pdist_squareform
+    from .querying import iterate_to_list
+    from .querying import object_chain_iter
+
+    func = {'max': numpy.max, 'mean': numpy.mean, 'sum': numpy.sum}[method]
+    minsize = int(minsize)
+    cutoff = float(cutoff)
+    quiet = int(quiet)
+    names = []
+
+    def gen(start, end):
+        for i in range(start + minsize, end - minsize):
+            yield (func(dist_mat[:i, :i]) + func(dist_mat[i:, i:]), i)
+
+    def gen_all(start, end):
+        try:
+            d0, j0 = min(gen(start, end))
+        except ValueError:
+            return
+
+        if d0 > cutoff:
+            return
+
+        yield (d0, j0)
+        yield from gen_all(start, j0)
+        yield from gen_all(j0, end)
+
+    for model, chain in object_chain_iter(selection, _self=_self):
+        sele = f'({selection}) & /{model}//{chain} & guide'
+
+        X = _self.get_coords(sele)
+        if X is None:
+            continue
+
+        dist_mat = pdist_squareform(X)
+
+        N = X.shape[0]
+        partitions = list(gen_all(0, N))
+        boundaries = [0] + sorted(j for (d, j) in partitions) + [N]
+
+        idx2macro = dict(
+            iterate_to_list(
+                sele,
+                '((model, index), f"/{model}/{segi}/{chain}/{resn}`{resi}")'))
+
+        idx2resi = dict(iterate_to_list(sele, '((model, index), resi)'))
+        idx_list = _self.index(sele)
+
+        for (i, j) in zip(boundaries[:-1], boundaries[1:]):
+            idxi, idxj = idx_list[i], idx_list[j - 1]
+            name = _self.get_unused_name(
+                f"{prefix}_{chain}_{idx2resi[idxi]}_{idx2resi[idxj]}",
+                alwaysnumber=0)
+            assert idxi[0] == model
+            _self.select(name,
+                         f"model {idxi[0]} & byres index {idxi[1]}-{idxj[1]}",
+                         0)
+
+            if not quiet:
+                print(f" {name:20} {idx2macro[idxi]:20} {idx2macro[idxj]}")
+
+            names.append(name)
+
+        if not quiet:
+            print(" Partitions:")
+            for (d, i) in sorted(partitions):
+                print(f" {d:4.2f} {idx2macro[idx_list[i]]}")
+
+    return names
+
+
 class select_temporary:
     '''
 DESCRIPTION
@@ -399,6 +496,7 @@ cmd.extend('diff', diff)
 cmd.extend('collapse_resi', collapse_resi)
 cmd.extend('select_distances', select_distances)
 cmd.extend('select_range', select_range)
+cmd.extend('select_domains', select_domains)
 
 # autocompletion
 cmd.auto_arg[0].update([
@@ -409,6 +507,7 @@ cmd.auto_arg[0].update([
     ('select_distances', [
         lambda: cmd.Shortcut(cmd.get_names_of_type('object:measurement')),
         'distance object', '']),
+    ('select_domains', cmd.auto_arg[0]['align']),
 ])
 cmd.auto_arg[1].update([
     ('select_pepseq', _auto_arg1_select),
