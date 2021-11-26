@@ -411,10 +411,31 @@ EXAMPLE
     _showfigure(fig, filename, quiet)
 
 
+def contact_map_plot(selection="guide", metric="euclidean", *, _self=cmd):
+    """
+DESCRIPTION
+
+    Plot a contact map.
+    """
+    import matplotlib.pyplot as plt
+    from .numeric import pdist_squareform
+
+    X = _self.get_coords(selection)
+    if X is None:
+        return
+
+    dist_mat = pdist_squareform(X, metric)
+
+    plt.pcolormesh(dist_mat)
+    plt.colorbar()
+    plt.show()
+
+
 # pymol commands
 cmd.extend('rms_plot', rms_plot)
 cmd.extend('pca_plot', pca_plot)
 cmd.extend('iterate_plot', iterate_plot)
+cmd.extend('contact_map_plot', contact_map_plot)
 
 _auto_arg_aln_objects = [
     lambda: cmd.Shortcut(cmd.get_names_of_type('object:alignment')),
@@ -426,6 +447,7 @@ cmd.auto_arg[0].update([
     ('rms_plot', cmd.auto_arg[0]['align']),
     ('iterate_plot', cmd.auto_arg[0]['iterate']),
     ('area_plot', cmd.auto_arg[0]['get_area']),
+    ('contact_map_plot', cmd.auto_arg[0]['zoom']),
 ])
 cmd.auto_arg[1].update([
     ('pca_plot', cmd.auto_arg[0]['disable']),
