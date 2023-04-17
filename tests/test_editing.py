@@ -227,3 +227,15 @@ def test_update_identifiers():
     my_values = []
     cmd.iterate('m2', 'my_values.append(segi)', space=locals())
     assert set(my_values) == set(["Segi"])
+
+
+def test_fixed_to_restrained():
+    cmd.reinitialize()
+    cmd.fragment('ala', 'm1')
+    cmd.flag("fix", "elem C")
+    psico.editing.fixed_to_restrained()
+    assert cmd.count_atoms("fixed") == 0
+    assert cmd.count_atoms("restrained") == 3
+    psico.editing.restrained_to_fixed()
+    assert cmd.count_atoms("fixed") == 3
+    assert cmd.count_atoms("restrained") == 0

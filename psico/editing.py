@@ -617,6 +617,40 @@ DESCRIPTION
         _self.alter(target, '%s = t2s.get(%s, %s)' % (key, key, key), space=locals())
 
 
+@cmd.extendaa(_auto_arg0_zoom)
+def fixed_to_restrained(selection: str = "*",
+                        state: int = -1,
+                        *,
+                        quiet=1,
+                        _self=cmd):
+    """
+DESCRIPTION
+
+    Convert "fixed" atoms to "restrained" atoms and set their fixed coordinates
+    as reference coordinates.
+    """
+    _self.reference("store", f"({selection}) & fixed", state, quiet=quiet)
+    _self.flag("restrain", f"({selection}) & fixed", "set", quiet=quiet)
+    _self.flag("fix", selection, "clear", quiet=quiet)
+
+
+@cmd.extendaa(_auto_arg0_zoom)
+def restrained_to_fixed(selection: str = "*",
+                        state: int = -1,
+                        *,
+                        quiet=1,
+                        _self=cmd):
+    """
+DESCRIPTION
+
+    Convert "restrained" atoms to "fixed" atoms and set their reference coordinates
+    as actual coordinates.
+    """
+    _self.flag("fix", f"({selection}) & restrained", "set", quiet=quiet)
+    _self.flag("restrain", selection, "clear", quiet=quiet)
+    _self.reference("recall", f"({selection}) & fixed", state, quiet=quiet)
+
+
 if 'split_chains' not in cmd.keyword:
     cmd.extend('split_chains', split_chains)
 cmd.extend('split_molecules', split_molecules)
